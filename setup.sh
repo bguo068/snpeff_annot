@@ -2,9 +2,9 @@
 
 # ------------------- Activate the miniconda hook -----------------------------------
 
-# NOTE: SnpEff required a newer version of java which is newer than what we have on the server
-# Thus, a conda environment is create instead of the packages in /usr/local/packages
-# To allow acess to multiple users, a miniconda instance is installed here: 
+# NOTE: SnpEff requires a newer version of java which is newer than what we have on the server.
+# Thus, a conda environment is used instead of the packages in /usr/local/packages folder.
+# To allow access from multiple users, a miniconda instance is installed here: 
 #   /local/data/Malaria/Projects/Takala-Harrison/AFRIMS/miniconda3
 #
 # To activate conda's base environment in your current shell session:
