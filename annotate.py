@@ -99,6 +99,8 @@ if args.genes is not None:
     # filter annotation table by gene id
     res_filt_df = res_df.merge(genes, how="left", on="Gene_Name")
     res_filt_df = res_filt_df[lambda x: ~x.Gene_Symbol.isnull()]
+    # Only keep non synonymous site
+    res_filt_df = res_filt_df[lambda x: x.Effect == "NON_SYNONYMOUS_CODING"]
     res_filt_df.to_csv(out_table_filt, sep="\t", index=None)
     res_filt_df[["Chrom", "POS"]].to_csv(
         out_sites_filt, sep="\t", index=None, header=None
