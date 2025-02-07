@@ -8,13 +8,13 @@
 #   /local/data/Malaria/Projects/Takala-Harrison/AFRIMS/miniconda3
 #
 # To activate conda's base environment in your current shell session:
-eval "$(/local/data/Malaria/Projects/Takala-Harrison/AFRIMS/miniconda3/bin/conda shell.bash hook)" 
+eval "$(/local/projects-t2/CVD/Takala-Harrison/AFRIMS/miniconda3/bin/conda shell.bash hook)" 
 
 # Install mamba for better resolve dependencies if not installed
 # conda install mamba -n base -c conda-forge
 
 # ------------------ Create the environment ---------------------
-mamba create -n snpeff -c bioconda snpeff
+# conda env create -f ./env.yaml
 conda activate snpeff
 
 # ------------------ Add Reference Genome to SnpEff ---------------------

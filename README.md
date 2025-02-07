@@ -1,11 +1,16 @@
 ### 1. Log into the server
-In a terminal, run `ssh [your_name]@rosalind.som.umaryland.edu`
+In a terminal, run `ssh [your_name]@arthas.igs.umaryland.edu` to log onto the server;
+Then use launch an interactive session: 
+```sh
+module load slurm
+srun -n 2 --mem 10G --pty bash
+```
 
 ### 2. Activate the shared conda environment
-After you logged into the server, run
+After you enter the interactive session, run
 ```sh
-eval "$(/local/data/Malaria/Projects/Takala-Harrison/AFRIMS/miniconda3/bin/conda shell.bash hook)" 
-export PATH=$PATH:/local/data/Malaria/Projects/Takala-Harrison/AFRIMS/SnpEff
+eval "$(/local/projects-t2/CVD/Takala-Harrison/AFRIMS/miniconda3/bin/conda shell.bash hook)" 
+export PATH=$PATH:/local/projects-t2/CVD/Takala-Harrison/AFRIMS/SnpEff
 conda activate snpeff
 ```
 ### 3. Prepare your VCF file
@@ -25,10 +30,17 @@ annotate.py --vcf [your].vcf.gz --out_prefix annotated --genes [genes.tsv]
 
 #### Example files
 1. A `VCF` file containing samples collected in 2015 or after can be found here:
-`/local/data/Malaria/Projects/Takala-Harrison/AFRIMS/SnpEff/VCFs/afrims_2015_or_newer_biallelic_maf0_001.vcf.gz`
+`/local/projects-t2/CVD/Takala-Harrison/AFRIMS/SnpEff/VCFs/afrims_2015_or_newer_biallelic_maf0_001.vcf.gz`
 
 2. An example `genes.tsv` file can be found here:
-`/local/data/Malaria/Projects/Takala-Harrison/AFRIMS/SnpEff/genes.csv`
+`/local/projects-t2/CVD/Takala-Harrison/AFRIMS/SnpEff/genes.csv`
+
+3. Run the script with the provided examples
+```sh
+annotate.py --vcf /local/projects-t2/CVD/Takala-Harrison/AFRIMS/SnpEff/VCFs/afrims_2015_or_newer_biallelic_maf0_001.vcf.gz --out_prefix annotated --genes /local/projects-t2/CVD/Takala-Harrison/AFRIMS/SnpEff/genes.csv 
+```
+
+
 
 #### Find the Gene IDs for your genes
 
@@ -44,5 +56,5 @@ Several files will be created. The most relevant one is: `XXXX_genotypes_filt.ts
 1. On the server, you can get the full path of your file: `realpath *genotypes_filt.tsv`. 
 Copy the full path to your clipboard (using the mouse) and you will need it in the next step.
 2. On your local machine, open a new terminal window and 
-use scp to download your file: `scp [your_name]@rosalind.som.umaryland.edu:/full/path/to/your/file ./`
+use scp to download your file: `scp [your_name]@arthas.igs.umaryland.edu:/full/path/to/your/file ./`
 3. You could your `Excel` or `libreoffice` to open the downloaded file.
