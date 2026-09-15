@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 # %%
 import argparse
 import os
@@ -223,14 +225,39 @@ def subset_by_gene_list(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--in_vcf", type=str, default="./tests/biallelic_ex.vcf.gz")
-    parser.add_argument("--out_vcf", type=str, default="tmp.vcf.gz")
-    parser.add_argument("--genome_version", type=int, default=44)
-    parser.add_argument("--genome_species", type=str, default="Pfalciparum")
-    parser.add_argument("--genome_strain", type=str, default="3D7")
-    parser.add_argument("--subset_by_gene_list", type=str, default=None)
-    parser.add_argument("--ref_dir", type=str, default=None)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--in_vcf", type=str, required=True, help="path to input vcf.gz files"
+    )
+    parser.add_argument(
+        "--out_vcf", type=str, default="tmp.vcf.gz", help="path to output vcf.gz"
+    )
+    parser.add_argument(
+        "--genome_version", type=int, default=44, help="genome version (plasmodb)"
+    )
+    parser.add_argument(
+        "--genome_species",
+        type=str,
+        default="Pfalciparum",
+        help="genome species (plasmodb)",
+    )
+    parser.add_argument(
+        "--genome_strain", type=str, default="3D7", help="strain (plasmodb)"
+    )
+    parser.add_argument(
+        "--subset_by_gene_list",
+        type=str,
+        default=None,
+        help="file to two column file, comma-separated table which 2nd column indicating gene id ",
+    )
+    parser.add_argument(
+        "--ref_dir",
+        type=str,
+        default=None,
+        help="reference folder used to find files for making snpEff database",
+    )
 
     args = parser.parse_args()
     version = args.genome_version
