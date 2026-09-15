@@ -3,6 +3,7 @@ import argparse
 import shutil
 import sys
 from io import BytesIO
+import os
 from pathlib import Path
 from subprocess import check_output, run
 
@@ -145,15 +146,21 @@ if __name__ == "__main__":
     parser.add_argument("--genome_version", type=int, default=44)
     parser.add_argument("--genome_species", type=str, default="Pfalciparum")
     parser.add_argument("--genome_strain", type=str, default="3D7")
-    parser.add_argument("--ref_dir", type=str, default="ref")
+    parser.add_argument("--ref_dir", type=str, default=None)
 
     args = parser.parse_args()
     version = args.genome_version
     species = args.genome_species
     strain = args.genome_strain
+    ref_dir = args.ref_dir
+    if ref_dir is None:
+        pixi_toml_path =os.getenv("PIXI_PROJECT_MANIFEST") 
+        if pixi_toml_path is None:
+            pixi_toml_path = '.'
+        ref_dir = Path(pixi_toml_path) / "ref"
 
     if not check_if_genome_exist(version, species, strain):
-        create_snpeff_db(args.ref_dir, version, species, strain)
+        create_snpeff_db(ref_dir, version, species, strain)
 
 
     run_snpeff(
