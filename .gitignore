@@ -1,2 +1,3 @@
 out*
-help*
+tmp*
+.pixi/*
