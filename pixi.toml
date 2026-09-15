@@ -2,7 +2,7 @@
 authors = ["Bing.Guo <bing.guo@som.umaryland.edu>"]
 channels = ["conda-forge", "bioconda"]
 name = "snpeff_annot"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
