@@ -1,0 +1,21 @@
+[workspace]
+authors = ["Bing.Guo <bing.guo@som.umaryland.edu>"]
+channels = ["conda-forge", "bioconda"]
+name = "snpeff_annot"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+snpeff = ">=5.4.0c,<6"
+pandas = ">=3.0.5,<4"
+bcftools = ">=1.24,<2"
+ruff = ">=0.16.7,<0.17"
+ty = ">=0.0.80,<0.0.81"
+
+[feature.dev.dependencies]
+ipython = "*"
+
+[environments]
+dev = ["dev", "default"]
