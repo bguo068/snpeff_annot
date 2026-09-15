@@ -268,7 +268,7 @@ if __name__ == "__main__":
         pixi_toml_path = os.getenv("PIXI_PROJECT_MANIFEST")
         if pixi_toml_path is None:
             pixi_toml_path = "."
-        ref_dir = Path(pixi_toml_path) / "ref"
+        ref_dir = Path(pixi_toml_path).parent / "ref"
 
     if not check_if_genome_exist(version, species, strain):
         create_snpeff_db(ref_dir, version, species, strain)
