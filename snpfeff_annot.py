@@ -76,10 +76,15 @@ def create_snpeff_db(
         if not Path(src).exists() and (
             run(
                 f"""
+                    set -xoueE pipefail
+                    mkdir -p {ref_dir}/archive
+                    cd {ref_dir}/archive
+                    wget https://github.com/bguo068/snpeff_annot/releases/download/v26.09.14-alpha/{genome}.tgz
                     cd {ref_dir}
                     tar xf archive/{genome}.tgz
                     """,
                 shell=True,
+                capture_output=True,
                 check=False,
             ).returncode
             != 0
