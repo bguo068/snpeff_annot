@@ -61,7 +61,7 @@ pixi run -m /path/to/snpeff_annot snpeff_annot --in_vcf <abs/path/your.vcf.gz> -
 | `--genome_species` | `Pfalciparum` | PlasmoDB species. |
 | `--genome_strain` | `3D7` | PlasmoDB strain. |
 | `--subset_by_gene_list` | *(none)* | Two-column comma-separated table whose **second** column holds the gene IDs to subset to. |
-| `--ref_dir` | `$PIXI_PROJECT_MANIFEST/ref` | Reference folder used to find the files for building the snpEff database. |
+| `--ref_dir` | the `ref/` folder next to `pixi.toml` | Reference folder used to find the files for building the snpEff database. |
 
 The genome name is derived from the version/species/strain as
 `PlasmoDB-{version}_{species}{strain}`, for example `PlasmoDB-44_Pfalciparum3D7`.
@@ -115,7 +115,7 @@ the run.
 3. Run the script with the provided examples:
 
 ```sh
-pixi run python ./snpfeff_annot.py \
+pixi run python ./snpeff_annot.py \
   --in_vcf tests/biallelic_ex.vcf.gz \
   --out_vcf out.vcf.gz \
   --genome_version 44 \
