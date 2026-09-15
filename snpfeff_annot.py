@@ -125,9 +125,12 @@ def run_snpeff(
 ):
     genome = f"PlasmoDB-{version}_{species}{strain}"
     out_stat = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.html")
-    out_gene =  Path(out_vcf.removesuffix(".vcf.gz") + "_stat.genes.txt")
+    out_gene = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.genes.txt")
 
-    cmd = f""" snpEff -noDownload -ud 0 {genome} {in_vcf} -s {out_stat} -o gatk | bgzip -c > {out_vcf} """
+    cmd = f"""
+        snpEff -noDownload -ud 0 {genome} {in_vcf} -s {out_stat} -o gatk | bgzip -c > {out_vcf}
+        bcftools index -f {out_vcf}
+    """
     # print(cmd)
     run(cmd, shell=True, check=True)
 
@@ -188,8 +191,35 @@ def parse_annotation(out_vcf: str):
 
     return df_annot
 
-def subset_by_gene_list():
-    out_vcf = "./tmp"
+
+def subset_by_gene_list(
+    out_vcf: str = "./tmp.vcf.gz",
+    out_annot: str | None = None,
+    subset_by_gene_list: str = "./genes.csv",
+):
+    if out_annot is None:
+        out_annot = out_vcf.removesuffix(".vcf.gz") + "_pretty_table.tsv"
+    out_vcf_subset = out_vcf.removesuffix(".vcf.gz") + "_subset.vcf.gz"
+    out_annot_subset = out_vcf.removesuffix(".vcf.gz") + "_pretty_table_subset.tsv"
+    out_site_subset = out_vcf.removesuffix(".vcf.gz") + "_site_subset.tsv"
+    df_subset = pd.read_csv(subset_by_gene_list, names=["Label", "Gene_Name"])
+
+    df_annot = pd.read_csv(out_annot, sep="\t")
+    df_annot_sel = df_annot[lambda df: df.Gene_Name.isin(df_subset.Gene_Name)]
+    df_annot_sel.to_csv(out_annot_subset, sep="\t", index=False)
+
+    # write a temp two-columsn list of sites
+    df_annot_sel[["Chromosome", "Position"]].to_csv(
+        out_site_subset, sep="\t", index=False, header=False
+    )
+
+    run(
+        f""" bcftools view -R {out_site_subset} {out_vcf} -Oz -o {out_vcf_subset} """,
+        shell=True,
+        check=True,
+    )
+    print(f"write file: {out_vcf_subset}")
+    print(f"write file: {out_annot_subset}")
 
 
 if __name__ == "__main__":
@@ -199,7 +229,7 @@ if __name__ == "__main__":
     parser.add_argument("--genome_version", type=int, default=44)
     parser.add_argument("--genome_species", type=str, default="Pfalciparum")
     parser.add_argument("--genome_strain", type=str, default="3D7")
-    parser.add_argument("--subset_by_genelist", type=str, default=None)
+    parser.add_argument("--subset_by_gene_list", type=str, default=None)
     parser.add_argument("--ref_dir", type=str, default=None)
 
     args = parser.parse_args()
@@ -219,3 +249,6 @@ if __name__ == "__main__":
     run_snpeff(args.in_vcf, args.out_vcf, version, species, strain)
 
     parse_annotation(args.out_vcf)
+
+    if args.subset_by_gene_list:
+        subset_by_gene_list(args.out_vcf, None, args.subset_by_gene_list)
