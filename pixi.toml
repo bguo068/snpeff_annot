@@ -6,7 +6,10 @@ platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
-snpeff_annot = "./snpeff_annot.py"
+# Build the snpEff database (default PlasmoDB-44_Pfalciparum3D7) once, before
+# annotating; extra arguments pass through, e.g. `pixi run setup --genome_version 68`.
+setup = { cmd = "./makedb.py", description = "Build the snpEff database of a PlasmoDB genome, if missing" }
+
 
 [dependencies]
 snpeff = ">=5.4.0c,<6"
