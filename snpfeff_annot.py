@@ -73,22 +73,22 @@ def create_snpeff_db(
         f"{target_dir}/protein.fa.orig",
     ]
     for src, dst in [seq, gene, cds, prot]:
-        if not Path(src).exists():
-            try:
-                run(
-                    f"""
+        if not Path(src).exists() and (
+            run(
+                f"""
                     cd {ref_dir}
                     tar xf archive/{genome}.tgz
                     """,
-                    shell=True,
-                    check=True,
-                )
-            except:  # noqa: E722
-                print(
-                    "\n\nError: {src} not found. You need to down it from plasmodb",
-                    file=sys.stderr,
-                )
-                sys.exit(-1)
+                shell=True,
+                check=False,
+            ).returncode
+            != 0
+        ):
+            print(
+                f"\n\nError: {src} not found. You need to down it from plasmodb",
+                file=sys.stderr,
+            )
+            sys.exit(-1)
         shutil.copy2(src, dst)
 
     ## fix header in protein.fa
