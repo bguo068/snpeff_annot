@@ -41,7 +41,7 @@ If your file is already biallelic, you can skip this step.
 Run the annotating script:
 
 ```sh
-pixi run python ./snpeff_annot.py --in_vcf <your.vcf.gz> --out_vcf <annotated.vcf.gz>
+pixi run snpeff_annot --in_vcf <your.vcf.gz> --out_vcf <annotated.vcf.gz>
 ```
 
 A pixi task is also provided, so the same script can be run from outside the
