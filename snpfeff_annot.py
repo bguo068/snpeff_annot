@@ -124,11 +124,19 @@ def run_snpeff(
     strain: str = "3D7",
 ):
     genome = f"PlasmoDB-{version}_{species}{strain}"
-    out_stat = out_vcf.removesuffix(".vcf.gz") + "_stat.html"
+    out_stat = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.html")
+    out_gene =  Path(out_vcf.removesuffix(".vcf.gz") + "_stat.genes.txt")
 
     cmd = f""" snpEff -noDownload -ud 0 {genome} {in_vcf} -s {out_stat} -o gatk | bgzip -c > {out_vcf} """
     # print(cmd)
     run(cmd, shell=True, check=True)
+
+    # remove unwanted files
+    if out_stat.exists():
+        out_stat.unlink()
+
+    if out_gene.exists():
+        out_gene.unlink()
 
     print(f"write_file: {out_vcf}")
 
@@ -180,6 +188,9 @@ def parse_annotation(out_vcf: str):
 
     return df_annot
 
+def subset_by_gene_list():
+    out_vcf = "./tmp"
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -188,6 +199,7 @@ if __name__ == "__main__":
     parser.add_argument("--genome_version", type=int, default=44)
     parser.add_argument("--genome_species", type=str, default="Pfalciparum")
     parser.add_argument("--genome_strain", type=str, default="3D7")
+    parser.add_argument("--subset_by_genelist", type=str, default=None)
     parser.add_argument("--ref_dir", type=str, default=None)
 
     args = parser.parse_args()
