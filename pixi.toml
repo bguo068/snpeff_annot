@@ -6,6 +6,7 @@ platforms = ["osx-arm64"]
 version = "0.1.0"
 
 [tasks]
+snpeff_annot = "./snpfeff_annot.py"
 
 [dependencies]
 snpeff = ">=5.4.0c,<6"
