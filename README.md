@@ -115,7 +115,7 @@ the run.
 3. Run the script with the provided examples:
 
 ```sh
-pixi run python ./snpeff_annot.py \
+pixi run snpeff_annot \
   --in_vcf tests/biallelic_ex.vcf.gz \
   --out_vcf out.vcf.gz \
   --genome_version 44 \
