@@ -2,10 +2,11 @@
 
 # %%
 import argparse
+import re
 import sys
 from io import BytesIO
 from pathlib import Path
-from subprocess import check_output, run
+from subprocess import PIPE, Popen, check_output, run
 
 import pandas as pd
 
@@ -23,13 +24,22 @@ def run_snpeff(
     out_stat = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.html")
     out_gene = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.genes.txt")
 
-    cmd = f"""
-        set -eo pipefail
-        snpEff -noDownload -ud 0 {genome} {in_vcf} -s {out_stat} -o gatk | bgzip -c > {out_vcf}
-        bcftools index -f {out_vcf}
-    """
-    # print(cmd)
-    run(cmd, shell=True, check=True, executable="/bin/bash")
+    # snpEff | bgzip > out_vcf, without a shell: the paths are the caller's,
+    # and a shell would read them. Each side's exit status is checked, so a
+    # snpEff that dies partway fails the run rather than leaving a short VCF.
+    snpeff_cmd = ["snpEff", "-noDownload", "-ud", "0", genome, in_vcf]
+    snpeff_cmd += ["-s", str(out_stat), "-o", "gatk"]
+    with open(out_vcf, "wb") as out:
+        snpeff = Popen(snpeff_cmd, stdout=PIPE)
+        bgzip = Popen(["bgzip", "-c"], stdin=snpeff.stdout, stdout=out)
+        snpeff.stdout.close()  # so snpEff sees a broken pipe if bgzip dies
+        bgzip_status = bgzip.wait()
+        snpeff_status = snpeff.wait()
+    for name, status in [("snpEff", snpeff_status), ("bgzip", bgzip_status)]:
+        if status != 0:
+            print(f"Error: {name} exited with status {status}", file=sys.stderr)
+            sys.exit(1)
+    run(["bcftools", "index", "-f", out_vcf], check=True)
 
     # remove unwanted files
     if out_stat.exists():
@@ -46,34 +56,33 @@ def parse_annotation(out_vcf: str):
 
     # ------------ parse info for table content -----------
     bytes = check_output(
-        f"""
-        bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\t%INFO/EFF\n' {out_vcf}                     
-    """,
-        shell=True,
+        ["bcftools", "query", "-f", "%CHROM\t%POS\t%REF\t%ALT\t%INFO/EFF\n", out_vcf]
     )
     names = ["Chromosome", "Position", "Ref", "Alt", "EFF"]
     df_raw = pd.read_csv(BytesIO(bytes), sep="\t", names=names)
 
+    # The first effect, EFFECT(IMPACT|CLASS|…): its `(` separates the effect
+    # from its fields, so each lands in a column of its own.
     df_eff = (
         df_raw.EFF.str.replace(r"\[.*\]", "", regex=True)
         .str.replace(r"\).*$", "", regex=True)
-        .str.replace(r"\(", "", regex=True)
+        .str.replace("(", "|", regex=False)
         .str.split("|", expand=True)
     )
 
     # ------------ parse info for table header  -----------
 
-    cols = (
-        check_output(
-            f"""
-        bcftools view -h {out_vcf} | grep -o 'Effect (.*)' | sed 's:Effect (::;s:\\[.*\\]::;s/ //g;s:)::' | tr '(' '|'
-            """,
-            shell=True,
-            text=True,
-        )
-        .strip()
-        .split("|")
-    )
+    # The EFF header's field list, "Effect ( Effect_Impact | … [ | ERRORS
+    # | WARNINGS ] )", as column names: Effect, then the fields in the
+    # parentheses, without the bracketed part and the spaces.
+    header = check_output(["bcftools", "view", "-h", out_vcf], text=True)
+    match = re.search(r"Effect \(.*\)", header)
+    if match is None:
+        print(f"Error: {out_vcf} has no snpEff EFF header", file=sys.stderr)
+        sys.exit(1)
+    fields = match.group(0).replace("Effect (", "", 1)
+    fields = re.sub(r"\[.*\]", "", fields, count=1).replace(" ", "")
+    cols = ["Effect", *fields.replace(")", "", 1).strip().split("|")]
 
     # add header to table
     df_eff.columns = cols
@@ -111,8 +120,7 @@ def subset_by_gene_list(
     )
 
     run(
-        f""" bcftools view -R {out_site_subset} {out_vcf} -Oz -o {out_vcf_subset} """,
-        shell=True,
+        ["bcftools", "view", "-R", out_site_subset, out_vcf, "-Oz", "-o", out_vcf_subset],
         check=True,
     )
     print(f"write file: {out_vcf_subset}")
