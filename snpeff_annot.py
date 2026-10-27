@@ -24,11 +24,12 @@ def run_snpeff(
     out_gene = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.genes.txt")
 
     cmd = f"""
+        set -eo pipefail
         snpEff -noDownload -ud 0 {genome} {in_vcf} -s {out_stat} -o gatk | bgzip -c > {out_vcf}
         bcftools index -f {out_vcf}
     """
     # print(cmd)
-    run(cmd, shell=True, check=True)
+    run(cmd, shell=True, check=True, executable="/bin/bash")
 
     # remove unwanted files
     if out_stat.exists():
