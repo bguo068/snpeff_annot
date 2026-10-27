@@ -4,15 +4,18 @@ Annotate a VCF file with [snpEff](https://pcingola.github.io/SnpEff/) using a
 [PlasmoDB](https://plasmodb.org/) reference genome, and export the annotations to
 a convenient TSV table.
 
-`snpeff_annot.py` performs four steps:
+Two scripts do the work:
 
-1. Make sure the requested snpEff database exists, building it from local
-   PlasmoDB reference files if needed.
-2. Run snpEff on the input VCF (keeping it within the `gatk` output format) and
+- `makedb.py` (the `setup` pixi task) builds the snpEff database of a PlasmoDB
+  genome from its reference files. Run it once per genome, before annotating.
+- `snpeff_annot.py` (the `snpeff_annot` pixi task) annotates a VCF in three
+  steps:
+
+1. Run snpEff on the input VCF (keeping it within the `gatk` output format) and
    index the result with `bcftools`.
-3. Parse the `EFF` field of the annotated VCF into a readable table
+2. Parse the `EFF` field of the annotated VCF into a readable table
    (`*_pretty_table.tsv`).
-4. Optionally subset the sites to a list of genes of interest.
+3. Optionally subset the sites to a list of genes of interest.
 
 ## Install pixi
 
@@ -35,6 +38,19 @@ bcftools norm -m- input.vcf.gz -Oz -o input_norm.vcf.gz
 ```
 
 If your file is already biallelic, you can skip this step.
+
+## Build the snpEff database
+
+Build the database of the default genome (`PlasmoDB-44_Pfalciparum3D7`):
+
+```sh
+pixi run setup
+```
+
+For another genome, pass its version, species or strain, e.g.
+`pixi run setup --genome_version 68`. An existing database is kept; add
+`--force` to rebuild it. See [snpEff database](#snpeff-database) for where the
+reference files come from.
 
 ## Annotate your VCF file
 
@@ -61,16 +77,25 @@ pixi run -m /path/to/snpeff_annot snpeff_annot --in_vcf <abs/path/your.vcf.gz> -
 | `--genome_species` | `Pfalciparum` | PlasmoDB species. |
 | `--genome_strain` | `3D7` | PlasmoDB strain. |
 | `--subset_by_gene_list` | *(none)* | Two-column comma-separated table whose **second** column holds the gene IDs to subset to. |
+
+The genome options must name a database already built with `pixi run setup`;
+otherwise the script exits with an error.
+
+`makedb.py` takes the same `--genome_version`, `--genome_species` and
+`--genome_strain`, plus:
+
+| Option | Default | Description |
+| --- | --- | --- |
 | `--ref_dir` | the `ref/` folder next to `pixi.toml` | Reference folder used to find the files for building the snpEff database. |
+| `--force` | off | Rebuild the database even if it already exists. |
 
 The genome name is derived from the version/species/strain as
 `PlasmoDB-{version}_{species}{strain}`, for example `PlasmoDB-44_Pfalciparum3D7`.
 
 ## snpEff database
 
-On startup the script checks whether the genome database is already installed in
-the snpEff `data` directory. If it is missing, the database is built
-automatically:
+`makedb.py` checks whether the genome database is already installed in the
+snpEff `data` directory. If it is missing (or with `--force`), it builds it:
 
 - It adds a `<genome>.genome` line to `snpEff.config` if necessary.
 - It looks for the PlasmoDB files in `--ref_dir` (default `ref/`):
@@ -78,9 +103,10 @@ automatically:
   - `PlasmoDB-{version}_{species}{strain}.gff`
   - `PlasmoDB-{version}_{species}{strain}_AnnotatedCDSs.fasta`
   - `PlasmoDB-{version}_{species}{strain}_AnnotatedProteins.fasta`
-- If a file is not present, it tries to extract
-  `ref/archive/PlasmoDB-{version}_{species}{strain}.tgz`. Archives for versions
-  44–71 are shipped in `ref/archive/`.
+- If a file is not present, it extracts
+  `ref/archive/PlasmoDB-{version}_{species}{strain}.tgz`, downloading the
+  archive first from this repo's `v26.09.14-alpha` release if it is not there
+  (archives for versions 44–71 are attached to that release).
 - Protein FASTA headers are reformatted so that the protein IDs match the CDS
   transcript IDs (separators `|` become spaces and the `-p1` suffix is removed).
 - Finally it runs `snpEff build -gff3`.
@@ -115,6 +141,7 @@ the run.
 3. Run the script with the provided examples:
 
 ```sh
+pixi run setup
 pixi run snpeff_annot \
   --in_vcf tests/biallelic_ex.vcf.gz \
   --out_vcf out.vcf.gz \

@@ -2,8 +2,6 @@
 
 # %%
 import argparse
-import os
-import shutil
 import sys
 from io import BytesIO
 from pathlib import Path
@@ -11,116 +9,7 @@ from subprocess import check_output, run
 
 import pandas as pd
 
-
-def get_snpeff_root() -> Path:
-    exe = shutil.which("snpEff")
-    assert exe, "snpEff command cannot be found"
-    return Path(exe).absolute().resolve().parent
-
-
-def list_snpeff_db() -> list[str]:
-    snpeff_root = get_snpeff_root()
-    return [p.parent.name for p in (snpeff_root / "data").glob("*/sequences.fa")]
-
-
-def check_if_genome_exist(
-    version: int = 44,
-    species: str = "Pfalciparum",
-    strain: str = "3D7",
-):
-    genome = f"PlasmoDB-{version}_{species}{strain}"
-    return genome in list_snpeff_db()
-
-
-def create_snpeff_db(
-    ref_dir="ref",
-    version: int = 44,
-    species: str = "Pfalciparum",
-    strain: str = "3D7",
-):
-    # define genome
-    genome = f"PlasmoDB-{version}_{species}{strain}"
-
-    # define paths
-    snpeff_root = get_snpeff_root()
-    conf_path = snpeff_root / "snpEff.config"
-    target_dir = snpeff_root / "data" / genome
-    if target_dir.exists():
-        shutil.rmtree(target_dir)
-    target_dir.mkdir(exist_ok=True, parents=True)
-
-    # update if config file if needed
-    conf_line = f"{genome}.genome :  {species}{strain}"
-    if conf_line not in conf_path.read_text():
-        with open(conf_path, "at") as f:
-            f.writelines([f"{conf_line}\n"])
-
-    # copy and fix files
-    seq = [
-        f"{ref_dir}/PlasmoDB-{version}_{species}{strain}_Genome.fasta",
-        f"{target_dir}/sequences.fa",
-    ]
-    gene = [
-        f"{ref_dir}/PlasmoDB-{version}_{species}{strain}.gff",
-        f"{target_dir}/genes.gff",
-    ]
-    cds = [
-        f"{ref_dir}/PlasmoDB-{version}_{species}{strain}_AnnotatedCDSs.fasta",
-        f"{target_dir}/cds.fa",
-    ]
-    prot = [
-        f"{ref_dir}/PlasmoDB-{version}_{species}{strain}_AnnotatedProteins.fasta",
-        f"{target_dir}/protein.fa.orig",
-    ]
-    for src, dst in [seq, gene, cds, prot]:
-        if not Path(src).exists() and (
-            run(
-                f"""
-                    set -xoueE pipefail
-                    mkdir -p {ref_dir}/archive
-                    cd {ref_dir}/archive
-                    wget https://github.com/bguo068/snpeff_annot/releases/download/v26.09.14-alpha/{genome}.tgz
-                    cd {ref_dir}
-                    tar xf archive/{genome}.tgz
-                    """,
-                shell=True,
-                capture_output=True,
-                check=False,
-            ).returncode
-            != 0
-        ):
-            print(
-                f"\n\nError: {src} not found. You need to down it from plasmodb",
-                file=sys.stderr,
-            )
-            sys.exit(-1)
-        shutil.copy2(src, dst)
-
-    ## fix header in protein.fa
-    #   1) change separator from | to space
-    #   2) remove the '-p1' suffix in protein id and make it consistent with
-    #   cds transcript ids
-    run(
-        f"""
-        sed -e 's/ | / /g;s/-p[0-9]* / /' {target_dir}/protein.fa.orig >  \
-{target_dir}/protein.fa
-        rm -rf {target_dir}/protein.fa.orig
-    """,
-        shell=True,
-        check=True,
-    )
-
-    # build the db
-    res = run(
-        f"snpEff build -gff3 -v PlasmoDB-{version}_{species}{strain}",
-        shell=True,
-        check=False,
-        capture_output=True,
-    )
-    if res.returncode != 0:
-        print(res.stderr)
-        sys.exit(-2)
-    print(f"created db: {genome}")
+from makedb import check_if_genome_exist, genome_name
 
 
 def run_snpeff(
@@ -130,7 +19,7 @@ def run_snpeff(
     species: str = "Pfalciparum",
     strain: str = "3D7",
 ):
-    genome = f"PlasmoDB-{version}_{species}{strain}"
+    genome = genome_name(version, species, strain)
     out_stat = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.html")
     out_gene = Path(out_vcf.removesuffix(".vcf.gz") + "_stat.genes.txt")
 
@@ -231,6 +120,7 @@ def subset_by_gene_list(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
+        description="Annotate a VCF with snpEff and export the annotations as a TSV table",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
@@ -257,26 +147,19 @@ if __name__ == "__main__":
         default=None,
         help="file to two column file, comma-separated table which 2nd column indicating gene id ",
     )
-    parser.add_argument(
-        "--ref_dir",
-        type=str,
-        default=None,
-        help="reference folder used to find files for making snpEff database",
-    )
 
     args = parser.parse_args()
     version = args.genome_version
     species = args.genome_species
     strain = args.genome_strain
-    ref_dir = args.ref_dir
-    if ref_dir is None:
-        pixi_toml_path = os.getenv("PIXI_PROJECT_MANIFEST")
-        if pixi_toml_path is None:
-            pixi_toml_path = "."
-        ref_dir = Path(pixi_toml_path).parent / "ref"
 
     if not check_if_genome_exist(version, species, strain):
-        create_snpeff_db(ref_dir, version, species, strain)
+        print(
+            f"Error: snpEff db {genome_name(version, species, strain)} not found;"
+            " build it first with makedb.py (pixi run setup)",
+            file=sys.stderr,
+        )
+        sys.exit(-1)
 
     run_snpeff(args.in_vcf, args.out_vcf, version, species, strain)
 
