@@ -91,6 +91,7 @@ def create_snpeff_db(
                 shell=True,
                 capture_output=True,
                 check=False,
+                executable="bash",
             ).returncode
             != 0
             or not Path(src).exists()
